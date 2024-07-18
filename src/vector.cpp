@@ -115,11 +115,6 @@ void Vector::mul(double scalar)
   mul(*this, scalar, *this);
 }
 
-void Vector::mul(Matrix &A)
-{
-  mul(*this, A, *this);
-}
-
 void Vector::add(Vector &v1, Vector &v2, Vector &result)
 {
   if (v1.dim != v2.dim)

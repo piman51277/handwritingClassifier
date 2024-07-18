@@ -30,7 +30,6 @@ public:
   static Vector mul(Vector &v, Matrix &A);
 
   void mul(double scalar);
-  void mul(Matrix &A); // performs vA. See Matrix.mul for Av
 
   static void add(Vector &v1, Vector &v2, Vector &result);
   static Vector add(Vector &v1, Vector &v2);

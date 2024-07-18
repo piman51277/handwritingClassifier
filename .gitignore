@@ -1,0 +1,6 @@
+bin/
+.vscode/
+*.bin
+generateMatrix
+*.data
+*.data.old

@@ -22,8 +22,7 @@ Vector activation_inverse(Vector &v)
   Vector result = Vector::copy(v);
   for (uint32_t i = 0; i < v.dim; i++)
   {
-    double sig = 1 / (1 + exp(-v.vec.get()[i]));
-    result.vec.get()[i] = sig * (1 - sig);
+    result.vec.get()[i] = result.vec.get()[i] * (1 - result.vec.get()[i]);
   }
   return result;
 }
@@ -212,7 +211,7 @@ void Net::train(TrainingDataSet &dataSet, TrainConfig &config)
         {
           Vector &layerInputSum = layerInputs[layer];
           Vector layerOutput = _activation(layerInputSum);
-          Vector net_j_rInv = activation_inverse(layerInputSum);
+          Vector net_j_rInv = activation_inverse(layerOutput);
           Vector &expected = data.output;
           Vector &delta = deltas[layer];
           // calculate delta

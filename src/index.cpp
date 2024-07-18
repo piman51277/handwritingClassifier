@@ -1,4 +1,5 @@
 #include "matrix.h"
+#include "vector.h"
 #include "net.h"
 #include <chrono>
 
@@ -12,8 +13,8 @@ TrainingDataSet createDataSet(double **inputs, int inputSize, double **outputs, 
 
   for (int i = 0; i < numData; i++)
   {
-    dataSet.data[i].input = createVector(inputSize);
-    dataSet.data[i].output = createVector(outputSize);
+    dataSet.data[i].input = Vector::create(inputSize);
+    dataSet.data[i].output = Vector::create(outputSize);
 
     for (int j = 0; j < inputSize; j++)
     {
@@ -29,7 +30,7 @@ TrainingDataSet createDataSet(double **inputs, int inputSize, double **outputs, 
   return dataSet;
 }
 
-int main_alt()
+int main()
 {
   // XOR test
   double **inputs = new double *[4];
@@ -74,20 +75,4 @@ int main_alt()
   std::cout << "Final error: " << error << std::endl;
 
   return 0;
-}
-
-int main()
-{
-  Matrix A = readMatrix("A.bin");
-  Matrix B = readMatrix("B.bin");
-
-  auto start = Clock::now();
-  Matrix C = mulMatrix(A, B);
-  auto end = Clock::now();
-
-  std::cout << "Multiplication took "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-            << "ms" << std::endl;
-
-  writeMatrix("C.bin", C);
 }

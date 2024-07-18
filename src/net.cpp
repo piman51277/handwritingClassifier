@@ -12,14 +12,14 @@ void activation(Vector &v)
 
 Vector _activation(Vector &v)
 {
-  Vector result = copyVector(v);
+  Vector result = Vector::copy(v);
   activation(result);
   return result;
 }
 
 Vector activation_inverse(Vector &v)
 {
-  Vector result = copyVector(v);
+  Vector result = Vector::copy(v);
   for (uint32_t i = 0; i < v.dim; i++)
   {
     double sig = 1 / (1 + exp(-v.vec.get()[i]));
@@ -49,8 +49,8 @@ Net::Net(uint32_t numLayers, uint32_t *layerSizes)
     this->layers[i].dim = layerSizes[i];
     if (i > 0)
     {
-      this->layers[i].weights = createMatrix(layerSizes[i], layerSizes[i - 1]);
-      this->layers[i].biases = createVector(layerSizes[i]);
+      this->layers[i].weights = Matrix::create(layerSizes[i], layerSizes[i - 1]);
+      this->layers[i].biases = Vector::create(layerSizes[i]);
     }
   }
 }
@@ -90,13 +90,12 @@ Vector Net::evaluate(Vector &input)
     throw std::runtime_error("Input size does not match network input size");
   }
 
-  Vector result = copyVector(input);
+  Vector result = Vector::copy(input);
   for (uint32_t i = 1; i < this->numLayers; i++)
   {
 
-    result = mulVector(this->layers[i].weights, result);
-
-    result = addVector(result, this->layers[i].biases);
+    result = Matrix::mul(this->layers[i].weights, result);
+    result.add(this->layers[i].biases);
     activation(result);
   }
   return result;
@@ -124,9 +123,9 @@ double Net::error_verbose(TrainingDataSet &dataSet)
     double error = MSE(result, data.output);
     std::cout << "Error: " << error << std::endl;
     std::cout << "Expected: ";
-    printVector(data.output);
+    data.output.print();
     std::cout << "Actual: ";
-    printVector(result);
+    result.print();
     sum += error;
   }
   return sum / dataSet.numData;
@@ -140,13 +139,13 @@ void Net::evaluateMonit(Vector &input, Vector *layerInputs)
     throw std::runtime_error("Input size does not match network input size");
   }
 
-  layerInputs[0] = copyVector(input);
-  Vector result = copyVector(input);
+  layerInputs[0] = Vector::copy(input);
+  Vector result = Vector::copy(input);
   for (uint32_t i = 1; i < this->numLayers; i++)
   {
-    result = mulVector(this->layers[i].weights, result);
-    addVectorSelf(result, this->layers[i].biases);
-    layerInputs[i] = copyVector(result);
+    result = Matrix::mul(this->layers[i].weights, result);
+    result.add(this->layers[i].biases);
+    layerInputs[i] = Vector::copy(result);
     activation(result);
   }
 }
@@ -157,20 +156,20 @@ void Net::train(TrainingDataSet &dataSet, TrainConfig &config)
   Matrix *gradientSums = new Matrix[this->numLayers];
   for (uint32_t i = 1; i < this->numLayers; i++)
   {
-    gradientSums[i] = createMatrix(this->layers[i].weights.dim1, this->layers[i].weights.dim2);
+    gradientSums[i] = Matrix::create(this->layers[i].weights.dim1, this->layers[i].weights.dim2);
   }
 
   // for momentum
   Matrix *lastGradients = new Matrix[this->numLayers];
   for (uint32_t i = 1; i < this->numLayers; i++)
   {
-    lastGradients[i] = createMatrix(this->layers[i].weights.dim1, this->layers[i].weights.dim2);
+    lastGradients[i] = Matrix::create(this->layers[i].weights.dim1, this->layers[i].weights.dim2);
   }
 
   Vector *biasSums = new Vector[this->numLayers];
   for (uint32_t i = 1; i < this->numLayers; i++)
   {
-    biasSums[i] = createVector(this->layers[i].dim);
+    biasSums[i] = Vector::create(this->layers[i].dim);
   }
 
   // prevent reallocation
@@ -181,7 +180,7 @@ void Net::train(TrainingDataSet &dataSet, TrainConfig &config)
 
   for (uint32_t i = 0; i < this->numLayers; i++)
   {
-    deltas[i] = createVector(this->layers[i].dim);
+    deltas[i] = Vector::create(this->layers[i].dim);
   }
 
   for (uint32_t epoch = 0; epoch < config.numEpochs; epoch++)
@@ -189,13 +188,13 @@ void Net::train(TrainingDataSet &dataSet, TrainConfig &config)
     // reset sums
     for (uint32_t i = 1; i < this->numLayers; i++)
     {
-      rstMatrix(gradientSums[i]);
+      gradientSums[i].reset();
     }
 
     // reset biases
     for (uint32_t i = 1; i < this->numLayers; i++)
     {
-      rstVector(biasSums[i]);
+      biasSums[i].reset();
     }
 
     const uint32_t batchSize = config.batchSize;
@@ -274,17 +273,17 @@ void Net::train(TrainingDataSet &dataSet, TrainConfig &config)
         Matrix &lastGrad = lastGradients[i];
 
         // momentum
-        mulMatrix(lastGrad, -1.0 * config.momentum, lastGrad);
-        addMatrixSelf(this->layers[i].weights, lastGrad);
+        lastGrad.mul(-1.0 * config.momentum);
+        this->layers[i].weights.add(lastGrad);
 
         // copy gradients for next iteration
-        cpyMatrix(grad, lastGrad);
+        Matrix::copy(grad, lastGrad);
 
-        mulMatrix(grad, adjScalarWeight, grad);
-        mulVector(biasSum, adjScalarBias, biasSum);
+        grad.mul(adjScalarWeight);
+        biasSum.mul(adjScalarBias);
 
-        addMatrixSelf(this->layers[i].weights, grad);
-        addVectorSelf(this->layers[i].biases, biasSum);
+        this->layers[i].weights.add(grad);
+        this->layers[i].biases.add(biasSum);
       }
 
       ptr += batchSize;

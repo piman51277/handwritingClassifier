@@ -2,6 +2,7 @@
 #include <cinttypes>
 #include <memory>
 #include "matrix.h"
+#include "vector.h"
 
 struct TrainingData
 {

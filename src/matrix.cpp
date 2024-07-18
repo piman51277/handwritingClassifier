@@ -1,6 +1,7 @@
+#include "vector.h"
 #include "matrix.h"
 
-Matrix createMatrix(uint32_t dim1, uint32_t dim2)
+Matrix Matrix::create(uint32_t dim1, uint32_t dim2)
 {
   Matrix matrix;
   matrix.dim1 = dim1;
@@ -11,7 +12,20 @@ Matrix createMatrix(uint32_t dim1, uint32_t dim2)
   return matrix;
 }
 
-Matrix readMatrix(const char *filename)
+void Matrix::print()
+{
+  double *mat = this->mat.get();
+  for (uint32_t i = 0; i < dim1; i++)
+  {
+    for (uint32_t j = 0; j < dim2; j++)
+    {
+      std::cout << mat[i * dim2 + j] << " ";
+    }
+    std::cout << std::endl;
+  }
+}
+
+Matrix Matrix::readFile(const char *filename)
 {
   std::ifstream file(filename, std::ios_base::binary);
   Matrix matrix;
@@ -23,7 +37,7 @@ Matrix readMatrix(const char *filename)
   return matrix;
 }
 
-void writeMatrix(const char *filename, Matrix &matrix)
+void Matrix::writeFile(const char *filename, Matrix &matrix)
 {
   std::ofstream file(filename);
   file.write(reinterpret_cast<char *>(&matrix.dim1), sizeof(matrix.dim1));
@@ -32,20 +46,39 @@ void writeMatrix(const char *filename, Matrix &matrix)
   file.close();
 }
 
-void printMatrix(Matrix &m)
+void Matrix::writeFile(const char *filename)
 {
-  for (uint32_t i = 0; i < m.dim1; i++)
-  {
-    for (uint32_t j = 0; j < m.dim2; j++)
-    {
-      std::cout << m.mat.get()[i * m.dim2 + j] << " ";
-    }
-    std::cout << std::endl;
-  }
+  writeFile(filename, *this);
 }
 
-// variant where memory is externally managed
-void mulMatrix(Matrix &A, Matrix &B, Matrix &result)
+void Matrix::copy(Matrix &m1, Matrix &m2)
+{
+  if (m1.dim1 != m2.dim1 || m1.dim2 != m2.dim2)
+  {
+    throw std::invalid_argument("Matrix dimensions do not match");
+  }
+
+  std::copy(m1.mat.get(), m1.mat.get() + m1.dim1 * m1.dim2, m2.mat.get());
+}
+
+Matrix Matrix::copy(Matrix &m)
+{
+  Matrix result = create(m.dim1, m.dim2);
+  std::copy(m.mat.get(), m.mat.get() + m.dim1 * m.dim2, result.mat.get());
+  return result;
+}
+
+void Matrix::reset(Matrix &m)
+{
+  std::fill(m.mat.get(), m.mat.get() + m.dim1 * m.dim2, 0);
+}
+
+void Matrix::reset()
+{
+  reset(*this);
+}
+
+void Matrix::mul(Matrix &A, Matrix &B, Matrix &result)
 {
   if (A.dim2 != B.dim1)
   {
@@ -72,70 +105,94 @@ void mulMatrix(Matrix &A, Matrix &B, Matrix &result)
   }
 }
 
-Matrix mulMatrix(Matrix &A, Matrix &B)
+void Matrix::mul(Matrix &A, double scalar, Matrix &result)
 {
-  Matrix result = createMatrix(A.dim1, B.dim2);
-  mulMatrix(A, B, result);
-  return result;
-}
-
-// variant where memory is externally managed
-void mulMatrix(Matrix &A, double scalar, Matrix &result)
-{
+  double *mat = result.mat.get();
   for (uint32_t i = 0; i < A.dim1 * A.dim2; i++)
   {
-    result.mat.get()[i] = A.mat.get()[i] * scalar;
+    mat[i] = A.mat.get()[i] * scalar;
   }
 }
 
-Matrix mulMatrix(Matrix &A, double scalar)
+void Matrix::mul(Matrix &A, Vector &v, Vector &result)
 {
-  Matrix result = createMatrix(A.dim1, A.dim2);
-  mulMatrix(A, scalar, result);
+  return Vector::mul(A, v, result);
+}
+
+void Matrix::mul(Vector &v, Matrix &A, Vector &result)
+{
+  return Vector::mul(v, A, result);
+}
+
+Matrix Matrix::mul(Matrix &A, Matrix &B)
+{
+  Matrix result = create(A.dim1, B.dim2);
+  mul(A, B, result);
   return result;
 }
 
-void addMatrix(Matrix &A, Matrix &B, Matrix &result)
+Matrix Matrix::mul(Matrix &A, double scalar)
+{
+  Matrix result = create(A.dim1, A.dim2);
+  mul(A, scalar, result);
+  return result;
+}
+
+Vector Matrix::mul(Matrix &A, Vector &v)
+{
+  Vector result = Vector::create(A.dim1);
+  mul(A, v, result);
+  return result;
+}
+
+Vector Matrix::mul(Vector &v, Matrix &A)
+{
+  Vector result = Vector::create(A.dim2);
+  mul(v, A, result);
+  return result;
+}
+
+void Matrix::mul(Matrix &A)
+{
+  Matrix result = create(dim1, A.dim2);
+  mul(*this, A, result);
+  this->dim1 = result.dim1;
+  this->dim2 = result.dim2;
+  this->mat = std::move(result.mat);
+}
+
+void Matrix::mul(double scalar)
+{
+  mul(*this, scalar, *this);
+}
+
+void Matrix::add(Matrix &A, Matrix &B, Matrix &result)
 {
   if (A.dim1 != B.dim1 || A.dim2 != B.dim2)
   {
-    throw std::runtime_error("Matrix dimensions do not match");
+    throw std::invalid_argument("Matrix dimensions do not match");
   }
 
+  double *mat = result.mat.get();
   for (uint32_t i = 0; i < A.dim1 * A.dim2; i++)
   {
-    result.mat.get()[i] = A.mat.get()[i] + B.mat.get()[i];
+    mat[i] = A.mat.get()[i] + B.mat.get()[i];
   }
 }
 
-Matrix addMatrix(Matrix &A, Matrix &B)
+Matrix Matrix::add(Matrix &A, Matrix &B)
 {
-  Matrix result = createMatrix(A.dim1, A.dim2);
-  addMatrix(A, B, result);
+  Matrix result = create(A.dim1, A.dim2);
+  add(A, B, result);
   return result;
 }
 
-void addMatrixSelf(Matrix &A, Matrix &B)
+void Matrix::add(Matrix &A)
 {
-  addMatrix(A, B, A);
+  add(*this, A, *this);
 }
 
-void cpyMatrix(Matrix &A, Matrix &result)
-{
-  if (A.dim1 != result.dim1 || A.dim2 != result.dim2)
-  {
-    throw std::runtime_error("Matrix dimensions do not match");
-  }
-
-  std::copy(A.mat.get(), A.mat.get() + A.dim1 * A.dim2, result.mat.get());
-}
-
-void rstMatrix(Matrix &A)
-{
-  std::fill(A.mat.get(), A.mat.get() + A.dim1 * A.dim2, 0);
-}
-
-bool matrixEquals(Matrix &A, Matrix &B, double epsilon)
+bool Matrix::equals(Matrix &A, Matrix &B, double epsilon)
 {
   if (A.dim1 != B.dim1 || A.dim2 != B.dim2)
   {
@@ -153,154 +210,7 @@ bool matrixEquals(Matrix &A, Matrix &B, double epsilon)
   return true;
 }
 
-Vector createVector(uint32_t dim)
+bool Matrix::equals(Matrix &A, double epsilon)
 {
-  Vector vector;
-  vector.dim = dim;
-  vector.vec.reset(new double[dim]);
-  std::fill(vector.vec.get(), vector.vec.get() + dim, 0);
-  return vector;
-}
-
-Vector copyVector(Vector &v)
-{
-  Vector result = createVector(v.dim);
-  std::copy(v.vec.get(), v.vec.get() + v.dim, result.vec.get());
-  return result;
-}
-
-void printVector(Vector &v)
-{
-  for (uint32_t i = 0; i < v.dim; i++)
-  {
-    std::cout << v.vec.get()[i] << " ";
-  }
-  std::cout << std::endl;
-}
-
-Vector mulVector(Matrix &A, Vector &v)
-{
-  Vector result = createVector(A.dim1);
-  mulVector(A, v, result);
-  return result;
-}
-
-// variant where memory is externally managed
-void mulVector(Matrix &A, Vector &v, Vector &result)
-{
-  if (A.dim2 != v.dim)
-  {
-    throw std::runtime_error("Matrix and vector dimensions do not match");
-  }
-
-  for (uint32_t i = 0; i < A.dim1; i++)
-  {
-    double sum = 0;
-    for (uint32_t j = 0; j < A.dim2; j++)
-    {
-      sum += A.mat.get()[i * A.dim2 + j] * v.vec.get()[j];
-    }
-    result.vec.get()[i] = sum;
-  }
-}
-
-// variant where memory is externally managed
-void mulVector(Vector &v, Matrix &A, Vector &result)
-{
-  if (A.dim1 != v.dim)
-  {
-    throw std::runtime_error("Matrix and vector dimensions do not match");
-  }
-
-  for (uint32_t i = 0; i < A.dim2; i++)
-  {
-    double sum = 0;
-    for (uint32_t j = 0; j < A.dim1; j++)
-    {
-      sum += v.vec.get()[j] * A.mat.get()[j * A.dim2 + i];
-    }
-    result.vec.get()[i] = sum;
-  }
-}
-
-Vector mulVector(Vector &v, Matrix &A)
-{
-  Vector result = createVector(A.dim2);
-  mulVector(v, A, result);
-  return result;
-}
-
-// variant where memory is externally managed
-void mulVector(Vector &v, double scalar, Vector &result)
-{
-  double *vec = result.vec.get();
-  for (uint32_t i = 0; i < v.dim; i++)
-  {
-    vec[i] = vec[i] * scalar;
-  }
-}
-
-Vector mulVector(Vector &v, double &scalar)
-{
-  Vector result = createVector(v.dim);
-  mulVector(v, scalar, result);
-  return result;
-}
-
-void addVector(Vector &v1, Vector &v2, Vector &result)
-{
-  if (v1.dim != v2.dim)
-  {
-    throw std::runtime_error("Vector dimensions do not match");
-  }
-
-  for (uint32_t i = 0; i < v1.dim; i++)
-  {
-    result.vec.get()[i] = v1.vec.get()[i] + v2.vec.get()[i];
-  }
-}
-
-Vector addVector(Vector &v1, Vector &v2)
-{
-  Vector result = createVector(v1.dim);
-  addVector(v1, v2, result);
-  return result;
-}
-
-void addVectorSelf(Vector &v1, Vector &v2)
-{
-  addVector(v1, v2, v1);
-}
-
-void cpyVector(Vector &v, Vector &result)
-{
-  if (v.dim != result.dim)
-  {
-    throw std::runtime_error("Vector dimensions do not match");
-  }
-
-  std::copy(v.vec.get(), v.vec.get() + v.dim, result.vec.get());
-}
-
-void rstVector(Vector &v)
-{
-  std::fill(v.vec.get(), v.vec.get() + v.dim, 0);
-}
-
-bool vectorEquals(Vector &v1, Vector &v2, double epsilon)
-{
-  if (v1.dim != v2.dim)
-  {
-    return false;
-  }
-
-  for (uint32_t i = 0; i < v1.dim; i++)
-  {
-    if (std::abs(v1.vec.get()[i] - v2.vec.get()[i]) > epsilon)
-    {
-      return false;
-    }
-  }
-
-  return true;
+  return equals(*this, A, epsilon);
 }

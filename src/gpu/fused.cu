@@ -11,6 +11,7 @@ __global__ void fused_mul_colwise_Kern(double *__restrict__ A, double *__restric
     const int row = i / dim3;
     const int col = i % dim3;
     double sum = 0;
+#pragma unroll
     for (int j = 0; j < dim2; j++)
     {
       sum += A[row * dim2 + j] * B[j * dim3 + col];
@@ -31,6 +32,7 @@ __global__ void fused_sub_dotmul_Kern(double *__restrict__ A, double *__restrict
 {
   const int index = blockIdx.x * blockDim.x + threadIdx.x;
   const int stride = blockDim.x * gridDim.x;
+#pragma unroll
   for (int i = index; i < dim1 * dim2; i += stride)
   {
     res[i] = (A[i] - B[i]) * C[i];
@@ -53,6 +55,7 @@ __global__ void fused_mulT_dotmul_Kern(double *__restrict__ A, double *__restric
     const int row = i / dim3;
     const int col = i % dim3;
     double sum = 0;
+#pragma unroll
     for (int j = 0; j < dim2; j++)
     {
       sum += A[j * dim1 + row] * B[j * dim3 + col];

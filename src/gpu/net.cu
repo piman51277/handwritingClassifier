@@ -247,11 +247,14 @@ __global__ void compGradKern(double *deltas, double *inputs, double *output, uin
     // relative to gradient matrix
     const uint32_t row = i / dim2;
     const uint32_t col = i % dim2;
+    const uint32_t dOff = row * cases;
+    const uint32_t iOff = col * cases;
 
     double sum = 0.0;
+#pragma unroll
     for (uint32_t c = 0; c < cases; c++)
     {
-      sum += deltas[row * cases + c] * inputs[col * cases + c];
+      sum += deltas[dOff + c] * inputs[iOff + c];
     }
     output[i] = sum;
   }
@@ -265,6 +268,7 @@ __global__ void compBiasGradKern(double *deltas, double *output, uint32_t dim1, 
   for (uint32_t i = index; i < dim1; i += stride)
   {
     double sum = 0.0;
+#pragma unroll
     for (uint32_t c = 0; c < cases; c++)
     {
       sum += deltas[i * cases + c];

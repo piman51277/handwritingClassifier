@@ -1,7 +1,7 @@
 #include "constants.h"
 #include "activation.h"
 
-__global__ void activationKernel(double *mat, uint32_t dim1, uint32_t dim2)
+__global__ void activationKernel(double *__restrict__ mat, uint32_t dim1, uint32_t dim2)
 {
   const int index = blockIdx.x * blockDim.x + threadIdx.x;
   const int stride = blockDim.x * gridDim.x;
@@ -11,24 +11,13 @@ __global__ void activationKernel(double *mat, uint32_t dim1, uint32_t dim2)
   }
 }
 
-__global__ void _activationPrimeKernel(double *mat, uint32_t dim1, uint32_t dim2)
+__global__ void _activationPrimeKernel(double *__restrict__ mat, uint32_t dim1, uint32_t dim2)
 {
   const int index = blockIdx.x * blockDim.x + threadIdx.x;
   const int stride = blockDim.x * gridDim.x;
   for (int i = index; i < dim1 * dim2; i += stride)
   {
     double val = mat[i];
-    mat[i] = val * (1 - val);
-  }
-}
-
-__global__ void activationPrimeKernel(double *mat, uint32_t dim1, uint32_t dim2)
-{
-  const int index = blockIdx.x * blockDim.x + threadIdx.x;
-  const int stride = blockDim.x * gridDim.x;
-  for (int i = index; i < dim1 * dim2; i += stride)
-  {
-    double val = 1 / (1 + exp(-mat[i]));
     mat[i] = val * (1 - val);
   }
 }
@@ -61,7 +50,7 @@ Matrix ActivationFunctionPrime(Matrix &mat)
   return copy;
 }
 
-__global__ void MSEKernel(double *output, double *target, double *result, uint32_t dim)
+__global__ void MSEKernel(double *__restrict__ output, double *__restrict__ target, double *__restrict__ result, uint32_t dim)
 {
   const int index = blockIdx.x * blockDim.x + threadIdx.x;
   const int stride = blockDim.x * gridDim.x;

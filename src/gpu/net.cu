@@ -2,6 +2,7 @@
 #include "net.h"
 #include "activation.h"
 #include "constants.h"
+#include "fused.h"
 
 Net::Net(std::vector<uint32_t> &layers)
 {
@@ -162,8 +163,9 @@ void Net::evaluateMonit(Matrix &input, Matrix *layerInputs)
   Matrix result = Matrix::copy(input);
   for (uint32_t i = 1; i < this->numLayers; i++)
   {
-    result = Matrix::mul(this->layers[i].weights, result);
-    result.addColwise(this->layers[i].biases);
+    // result = Matrix::mul(this->layers[i].weights, result);
+    // result.addColwise(this->layers[i].biases);
+    result = fused_mul_colwise(this->layers[i].weights, result, this->layers[i].biases);
     layerInputs[i] = Matrix::copy(result);
     ActivationFunction(result);
   }
@@ -237,37 +239,37 @@ double Net::error_percent(TrainingDataSet &dataSet)
 // inputs is dim2 x cases
 __global__ void compGradKern(double *deltas, double *inputs, double *output, uint32_t dim1, uint32_t dim2, uint32_t cases)
 {
-  uint32_t index = blockIdx.x * blockDim.x + threadIdx.x;
-  uint32_t stride = blockDim.x * gridDim.x;
+  const uint32_t index = blockIdx.x * blockDim.x + threadIdx.x;
+  const uint32_t stride = blockDim.x * gridDim.x;
 
   for (uint32_t i = index; i < dim1 * dim2; i += stride)
   {
-    output[i] = 0.0; // reset output
+    // relative to gradient matrix
+    const uint32_t row = i / dim2;
+    const uint32_t col = i % dim2;
+
+    double sum = 0.0;
     for (uint32_t c = 0; c < cases; c++)
     {
-      // relative to gradient matrix
-      uint32_t row = i / dim2;
-      uint32_t col = i % dim2;
-
-      double val = deltas[row * cases + c] * inputs[col * cases + c];
-      atomicAdd(&output[i], val);
+      sum += deltas[row * cases + c] * inputs[col * cases + c];
     }
+    output[i] = sum;
   }
 }
 
 __global__ void compBiasGradKern(double *deltas, double *output, uint32_t dim1, uint32_t cases)
 {
-  uint32_t index = blockIdx.x * blockDim.x + threadIdx.x;
-  uint32_t stride = blockDim.x * gridDim.x;
+  const uint32_t index = blockIdx.x * blockDim.x + threadIdx.x;
+  const uint32_t stride = blockDim.x * gridDim.x;
 
   for (uint32_t i = index; i < dim1; i += stride)
   {
-    output[i] = 0.0; // reset output
+    double sum = 0.0;
     for (uint32_t c = 0; c < cases; c++)
     {
-      double val = deltas[i * cases + c];
-      atomicAdd(&output[i], val);
+      sum += deltas[i * cases + c];
     }
+    output[i] = sum;
   }
 }
 
@@ -293,6 +295,10 @@ void Net::train(TrainingDataSet &dataSet, TrainConfig &config)
   }
 
   Matrix *layerInputs = new Matrix[this->numLayers];
+  for (uint32_t i = 0; i < this->numLayers; i++)
+  {
+    layerInputs[i] = Matrix::create(this->layers[i].dim, config.batchSize);
+  }
 
   Matrix *deltas = new Matrix[this->numLayers];
   for (uint32_t i = 1; i < this->numLayers; i++)
@@ -324,8 +330,9 @@ void Net::train(TrainingDataSet &dataSet, TrainConfig &config)
         // if last layer
         if (layer == this->numLayers - 1)
         {
-          Matrix::sub(layerOutput, expected, delta);
-          Matrix::dotmul(delta, netj_rhoP, delta);
+          // Matrix::sub(layerOutput, expected, delta);
+          // Matrix::dotmul(delta, netj_rhoP, delta);
+          fused_sub_dotmul(layerOutput, expected, netj_rhoP, delta);
         }
 
         // inner layers
@@ -333,8 +340,9 @@ void Net::train(TrainingDataSet &dataSet, TrainConfig &config)
         {
           Matrix &lastDelta = deltas[layer + 1];
           Matrix &lastWeights = this->layers[layer + 1].weights;
-          Matrix::mulTrans(lastWeights, lastDelta, delta);
-          delta.dotmul(netj_rhoP);
+          // Matrix::mulTrans(lastWeights, lastDelta, delta);
+          // delta.dotmul(netj_rhoP);
+          fused_mulT_dotmul(lastWeights, lastDelta, netj_rhoP, delta);
         }
 
         // compute gradient

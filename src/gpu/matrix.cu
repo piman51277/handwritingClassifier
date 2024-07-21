@@ -1,7 +1,7 @@
 #include "matrix.h"
 #include "constants.h"
 
-__global__ void fillKern(double *ptr, uint32_t dim, double fill)
+__global__ void fillKern(double *__restrict__ ptr, uint32_t dim, double fill)
 {
   const int index = blockIdx.x * blockDim.x + threadIdx.x;
   const int stride = blockDim.x * gridDim.x;
@@ -37,7 +37,7 @@ Matrix Matrix::create(uint32_t dim1, uint32_t dim2)
   return m;
 }
 
-__global__ void matColRippleKern(double *mat, double *vec, uint32_t dim1, uint32_t dim2)
+__global__ void matColRippleKern(double *__restrict__ mat, double *__restrict__ vec, uint32_t dim1, uint32_t dim2)
 {
   const int index = blockIdx.x * blockDim.x + threadIdx.x;
   const int stride = blockDim.x * gridDim.x;
@@ -47,7 +47,7 @@ __global__ void matColRippleKern(double *mat, double *vec, uint32_t dim1, uint32
   }
 }
 
-__global__ void matRowRippleKern(double *mat, double *vec, uint32_t dim1, uint32_t dim2)
+__global__ void matRowRippleKern(double *__restrict__ mat, double *__restrict__ vec, uint32_t dim1, uint32_t dim2)
 {
   const int index = blockIdx.x * blockDim.x + threadIdx.x;
   const int stride = blockDim.x * gridDim.x;
@@ -154,7 +154,7 @@ void Matrix::print()
   cudaFree(m);
 }
 
-__global__ void matrixAddKern(double *A, double *B, double *C, uint32_t dim1, uint32_t dim2)
+__global__ void matrixAddKern(double *__restrict__ A, double *__restrict__ B, double *__restrict__ C, uint32_t dim1, uint32_t dim2)
 {
   const int index = blockIdx.x * blockDim.x + threadIdx.x;
   const int stride = blockDim.x * gridDim.x;
@@ -187,7 +187,7 @@ void Matrix::add(Matrix &A)
   add(*this, A, *this);
 }
 
-__global__ void matrixAddColwiseKern(double *A, double *B, double *C, uint32_t dim1, uint32_t dim2)
+__global__ void matrixAddColwiseKern(double *__restrict__ A, double *__restrict__ B, double *__restrict__ C, uint32_t dim1, uint32_t dim2)
 {
   const int index = blockIdx.x * blockDim.x + threadIdx.x;
   const int stride = blockDim.x * gridDim.x;
@@ -220,7 +220,7 @@ void Matrix::addColwise(Vector &A)
   addColwise(*this, A, *this);
 }
 
-__global__ void matrixSubKern(double *A, double *B, double *C, uint32_t dim1, uint32_t dim2)
+__global__ void matrixSubKern(double *__restrict__ A, double *__restrict__ B, double *__restrict__ C, uint32_t dim1, uint32_t dim2)
 {
   const int index = blockIdx.x * blockDim.x + threadIdx.x;
   const int stride = blockDim.x * gridDim.x;
@@ -253,7 +253,7 @@ void Matrix::sub(Matrix &A)
   sub(*this, A, *this);
 }
 
-__global__ void matrixMulKern(double *A, double *B, double *C, uint32_t dim1, uint32_t dim2, uint32_t dim3)
+__global__ void matrixMulKern(double *__restrict__ A, double *__restrict__ B, double *__restrict__ C, uint32_t dim1, uint32_t dim2, uint32_t dim3)
 {
   const int index = blockIdx.x * blockDim.x + threadIdx.x;
   const int stride = blockDim.x * gridDim.x;
@@ -282,7 +282,7 @@ void Matrix::mul(Matrix &A, Matrix &B, Matrix &res)
   cudaDeviceSynchronize();
 }
 
-__global__ void matrixMulVecKern(double *A, double *B, double *C, uint32_t dim1, uint32_t dim2)
+__global__ void matrixMulVecKern(double *__restrict__ A, double *__restrict__ B, double *__restrict__ C, uint32_t dim1, uint32_t dim2)
 {
   const int index = blockIdx.x * blockDim.x + threadIdx.x;
   const int stride = blockDim.x * gridDim.x;
@@ -309,7 +309,7 @@ void Matrix::mul(Matrix &A, Vector &B, Vector &res)
   cudaDeviceSynchronize();
 }
 
-__global__ void matrixMulScalarKern(double *A, double scalar, double *C, uint32_t dim1, uint32_t dim2)
+__global__ void matrixMulScalarKern(double *__restrict__ A, double scalar, double *__restrict__ C, uint32_t dim1, uint32_t dim2)
 {
   const int index = blockIdx.x * blockDim.x + threadIdx.x;
   const int stride = blockDim.x * gridDim.x;
@@ -359,7 +359,7 @@ void Matrix::mul(double scalar)
 
 // A is dim2 x dim1, B is dim2 x dim3 and C is dim1 x dim3
 // 1 3 4
-__global__ void matrixMulTransKern(double *A, double *B, double *C, uint32_t dim1, uint32_t dim2, uint32_t dim3)
+__global__ void matrixMulTransKern(double *__restrict__ A, double *__restrict__ B, double *__restrict__ C, uint32_t dim1, uint32_t dim2, uint32_t dim3)
 {
   const int index = blockIdx.x * blockDim.x + threadIdx.x;
   const int stride = blockDim.x * gridDim.x;
@@ -395,7 +395,7 @@ Matrix Matrix::mulTrans(Matrix &A, Matrix &B)
   return res;
 }
 
-__global__ void matrixDotmulKern(double *A, double *B, double *C, uint32_t dim1, uint32_t dim2)
+__global__ void matrixDotmulKern(double *__restrict__ A, double *__restrict__ B, double *__restrict__ C, uint32_t dim1, uint32_t dim2)
 {
   const int index = blockIdx.x * blockDim.x + threadIdx.x;
   const int stride = blockDim.x * gridDim.x;

@@ -51,14 +51,14 @@ int main()
   // use a 2 3 1 network
   uint32_t layerSizes[4] = {2, 3, 3, 1};
 
-  Net net(3, layerSizes);
+  Net net(4, layerSizes);
   net.initializeWeights();
 
   double error = net.error(dataSet);
 
   std::cout << "Initial error: " << error << std::endl;
 
-  TrainConfig config{100000, 2, 0.2, 0.2, 0.1};
+  TrainConfig config{10000, 4, 0.2, 0.2, 0.1};
 
   auto start = Clock::now();
 

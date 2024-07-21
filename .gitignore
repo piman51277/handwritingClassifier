@@ -4,3 +4,5 @@ bin/
 generateMatrix
 *.data
 *.data.old
+config.txt
+data

@@ -6,5 +6,7 @@ export CUDAFLAGS="-std=c++20 -O3 -diag-suppress 186"
 #g++ tools/generateMatrix.cpp $CXXFLAGS -o generateMatrix
 
 #main script
-g++ src/*.cpp $CXXFLAGS -o bin/classifier
-#nvcc src/*.cu -O3 -diag-suppress 186 -gencode=arch=compute_86,code=sm_86 -o bin/a.out
+#echo "Compiling CPU..."
+#g++ src/cpu/*.cpp $CXXFLAGS -o bin/classifier
+echo "Compiling GPU..."
+nvcc src/gpu/*.cu -O3 -diag-suppress 186 -gencode=arch=compute_86,code=sm_86 -o bin/a.out

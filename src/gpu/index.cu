@@ -11,46 +11,6 @@
 #include <chrono>
 typedef std::chrono::high_resolution_clock Clock;
 
-void visualizeMNIST(TrainingData &data, uint32_t index)
-{
-  Matrix &input = data.input;
-  Matrix &expected = data.expected;
-
-  // copy data to host
-  double *inputData;
-  double *expectedData;
-  cudaMallocHost(&inputData, input.dim1 * input.dim2 * sizeof(double));
-  cudaMallocHost(&expectedData, expected.dim1 * expected.dim2 * sizeof(double));
-  cudaMemcpy(inputData, input.mat.get(), input.dim1 * input.dim2 * sizeof(double), cudaMemcpyDeviceToHost);
-  cudaMemcpy(expectedData, expected.mat.get(), expected.dim1 * expected.dim2 * sizeof(double), cudaMemcpyDeviceToHost);
-
-  // images are 28x28, and we are looking at the index-th column
-  for (uint32_t i = 0; i < 28; i++)
-  {
-    for (uint32_t j = 0; j < 28; j++)
-    {
-      if (inputData[index + (i * 28 + j) * input.dim2] > 0.1)
-      {
-        std::cout << "X";
-      }
-      else
-      {
-        std::cout << "-";
-      }
-    }
-    std::cout << std::endl;
-  }
-
-  // print expected label
-  for (uint32_t i = 0; i < 10; i++)
-  {
-    if (expectedData[index + i * expected.dim2] > 0.1)
-    {
-      std::cout << i << std::endl;
-    }
-  }
-}
-
 std::vector<uint32_t> getSettings(const char *filename)
 {
   std::ifstream file(filename, std::ios::binary);
@@ -77,7 +37,7 @@ void train(const char *filename)
   std::cout << "MNIST data loaded." << std::endl;
 
   // create network
-  std::vector<uint32_t> layers = getSettings("config.txt");
+  std::vector<uint32_t> layers = {784, 400, 400, 200, 10};
   Net net(layers);
   net.initializeWeights();
   std::cout << "Network created." << std::endl;

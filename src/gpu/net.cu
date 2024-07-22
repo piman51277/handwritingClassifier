@@ -4,6 +4,10 @@
 #include "constants.h"
 #include "fused.h"
 
+// small helper to estimate training time completion
+#include <chrono>
+typedef std::chrono::high_resolution_clock Clock;
+
 Net::Net(std::vector<uint32_t> &layers)
 {
   this->numLayers = layers.size();
@@ -310,9 +314,21 @@ void Net::train(TrainingDataSet &dataSet, TrainConfig &config)
     deltas[i] = Matrix::create(this->layers[i].dim, config.batchSize);
   }
 
+  auto t1 = Clock::now();
+
   for (uint32_t epoch = 0; epoch < config.numEpochs; epoch++)
   {
-    std::cout << "Started Epoch " << epoch << std::endl;
+    auto t2 = Clock::now();
+    uint32_t ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+    uint32_t timeRemaining = (uint32_t)((config.numEpochs - epoch) * ms);
+    uint32_t timeRemainingSec = timeRemaining / 1000;
+    uint32_t timeRemainingMin = timeRemainingSec / 60;
+    timeRemainingSec = timeRemainingSec % 60;
+    t1 = t2;
+
+    // reset the cursor to the beginning of the line
+    std::cout << "\r";
+    std::cout << "Started Epoch " << epoch + 1 << "/" << config.numEpochs << " -- Dur " << ms << "ms -- Est " << timeRemainingMin << "m " << timeRemainingSec << "s " << std::flush;
 
     // the cases are already pre-batched
     for (uint32_t tCase = 0; tCase < dataSet.numData; tCase++)
@@ -386,4 +402,6 @@ void Net::train(TrainingDataSet &dataSet, TrainConfig &config)
       }
     }
   }
+
+  std::cout << std::endl;
 }

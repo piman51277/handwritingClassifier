@@ -76,7 +76,7 @@ __global__ void MSEKernel(double *__restrict__ output, double *__restrict__ targ
 
   if (threadIdx.x == 0)
   {
-    atomicAdd(result, sdata[0]);
+    *result = sdata[0];
   }
 }
 

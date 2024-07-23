@@ -1,6 +1,8 @@
 bin/
 .vscode/
 *.bin
+*.bindat
+logs/
 generateMatrix
 *.data
 *.data.old
